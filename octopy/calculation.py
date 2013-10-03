@@ -10,6 +10,8 @@ class Calculation(object):
     _params = {'CalculationMode': 'gs',
                'OutputHow': 'cube',
                'Output': 'density'}
+    _species = []
+    _coordinates = []
 
     def __init__(self, folder=None, octopus=None, **kwargs):
         if folder is None:
@@ -24,14 +26,14 @@ class Calculation(object):
         # touch is_octopy file
         open(os.path.join(self.folder, 'is_octopy'), 'w').close()
 
-        self.set_params(**kwargs)
+        self.add_params(**kwargs)
 
     def __del__(self):
         if not self.keep_folder and os.path.exists(os.path.join(self.folder,
                                                                 'is_octopy')):
             shutil.rmtree(self.folder)
 
-    def set_params(self, **kwargs):
+    def add_params(self, **kwargs):
         """ Set the parameters for the octopus run.
 
         A list of all parameters is given in the octopus variable
@@ -42,15 +44,25 @@ class Calculation(object):
         # add new params to self._params
         for key in kwargs:
             self._params[key] = kwargs[key]
+
+        # set output according to dimensions
         if ('Dimensions' in self._params and
                 int(self._params['Dimensions']) == 1):
             self._params['OutputHow'] = 'axis_x'
         else:
             self._params['OutputHow'] = 'cube'
 
+        params = dict(self._params)
+
+        # add species and coordinates
+        if 'Species' not in params and len(self._species) != 0:
+            params['Species'] = self._species
+        if 'Coordinates' not in params and len(self._coordinates) != 0:
+            params['Coordinates'] = self._coordinates
+
         # create info for inp file
-        for key in self._params:
-            value = self._params[key]
+        for key in params:
+            value = params[key]
             if not (isinstance(value, (list, tuple)) or
                     (isinstance(value, np.ndarray) and (len(value) > 1 or
                                                         value.ndim > 1))):
@@ -75,15 +87,31 @@ class Calculation(object):
             for line in inp:
                 f.write(line + '\n')
 
-    def set_box_params(self, L, dx):
+    def add_box_params(self, L, dx):
         """ Convenience function for cubic grids
 
         L is the length of the box
         dx is the spacing between to grid points on one axis
         """
 
-        self.set_params(Lsize=float(L)/2., Spacing=dx,
+        self.add_params(Lsize=float(L)/2., Spacing=dx,
                         BoxShape='parallelepiped')
+
+    def add_species(self, name, mass, type, charge, other):
+        if not hasattr(other, '__iter__'):
+            other = [other]
+        for i in range(len(other)):
+            if isinstance(other[i], str):
+                other[i] = '\'' + other[i] + '\''
+            else:
+                other[i] = str(other[i])
+        self._species.append(['\'' + name + '\'', mass, type, charge] +
+                             other)
+
+    def add_coordinate(self, name, position):
+        if not hasattr(position, '__iter__'):
+            position = [position]
+        self._coordinates.append(['\'' + name + '\''] + position)
 
     def run(self):
         with open(os.path.join(self.folder, 'output'), 'w') as f:
@@ -112,7 +140,8 @@ class Calculation(object):
                         raise Exception('iterations_set2')
                     iterations = 0
                     iterations_set = True
-                if 'Total' in line:
+                if ('Total' in line and '=' in line
+                        and line.split('=')[0].strip() == 'Total'):
                     if E_set:
                         raise Exception('E_set')
                     E = float(line.split('=')[1].strip())
