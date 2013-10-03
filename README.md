@@ -7,7 +7,7 @@ Example
 -------
 This will calculate the 1-D quantum harmonic oscillator.
 
-    c = octopy.Calculation(octopus='~/build/octopus/bin/octopus_mpi')
+    c = octopy.Calculation(octopus='/path/to/your/octopus')
     c.set_params(Dimensions=1,
                  TheoryLevel='independent_particles',
                  Species=[['\'A\'', 0, 'spec_user_defined', 2, '\'0.5*x^2\'']],
