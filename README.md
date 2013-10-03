@@ -1,10 +1,12 @@
 octopy
 ======
 
-A python wrapper for the DFT code octopus (http://tddft.org/programs/octopus)
+A simple python wrapper for the DFT code octopus (http://tddft.org/programs/octopus)
 
-Example
--------
+
+Example: 1-D Harmonic Oscillator
+--------------------------------
+
 This will calculate the 1-D quantum harmonic oscillator.
 
     c = octopy.Calculation(octopus='/path/to/your/octopus')
@@ -17,3 +19,13 @@ This will calculate the 1-D quantum harmonic oscillator.
     E, T, V, density = c.get_output()
 
 It outputs the total (E), kinetic (T) and potential (V) energy and the density.
+
+Example: Hydrogen Atom
+----------------------
+
+This will do a ground-state calculation for 3-D Hydrogen.
+
+    c = octopy.Calculation(octopus='/path/to/your/octopus')
+    c.set_params(Coordinates=[['\'H\'', 0, 0, 0]])
+    c.run()
+    E, T, V, density = c.get_output()
