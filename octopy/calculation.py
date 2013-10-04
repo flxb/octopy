@@ -14,6 +14,14 @@ class Calculation(object):
     _coordinates = []
 
     def __init__(self, folder=None, octopus=None, **kwargs):
+        """ Octopy calculation class
+
+        folder: path to folder where octopus data will be saved
+        octopus: path to octopus executable. It will be executed
+            in folder path
+        Other keyword arguments are passed to set_parameters
+        """
+
         if folder is None:
             self.folder = 'temp_octopy'
         if octopus is None:
@@ -29,6 +37,8 @@ class Calculation(object):
         self.add_params(**kwargs)
 
     def __del__(self):
+        """ Deletes folder when object is deleted """
+
         if not self.keep_folder and os.path.exists(os.path.join(self.folder,
                                                                 'is_octopy')):
             shutil.rmtree(self.folder)
@@ -38,6 +48,9 @@ class Calculation(object):
 
         A list of all parameters is given in the octopus variable
         reference (see octopus wiki for recent version)
+
+        Block variables are added by providing a list, tuple or
+        numpy.ndarray.
         """
 
         inp = []
@@ -98,6 +111,12 @@ class Calculation(object):
                         BoxShape='parallelepiped')
 
     def add_species(self, name, mass, type, charge, other):
+        """ Add Species
+
+        See Species variable in octopus reference for details.
+        other can be list or single value
+        """
+
         if not hasattr(other, '__iter__'):
             other = [other]
         for i in range(len(other)):
@@ -109,16 +128,29 @@ class Calculation(object):
                              other)
 
     def add_coordinate(self, name, position):
+        """ Add Coordinate
+
+        See Coordinates variable in octopus reference for details.
+        """
+
         if not hasattr(position, '__iter__'):
             position = [position]
         self._coordinates.append(['\'' + name + '\''] + position)
 
     def run(self):
+        """ Start the octopus run """
         with open(os.path.join(self.folder, 'output'), 'w') as f:
             subprocess.call(self.octopus, cwd=self.folder, stdout=f,
                             stderr=subprocess.STDOUT, shell=True)
 
     def get_output(self, read_density=True):
+        """ Returns a tuple of output values
+        E: Total energy
+        T: Kinetic energy
+        V: Potential energy
+        density: density of the system
+        """
+
         # read static/info
         iterations_set = False
         E_set = False
