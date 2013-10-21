@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import shutil
 import numpy as np
@@ -36,7 +37,14 @@ class Calculation(object):
 
         self.add_params(**kwargs)
 
-    def __del__(self):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.delete_folder()
+        return False
+
+    def delete_folder(self):
         """ Deletes folder when object is deleted """
 
         if not self.keep_folder and os.path.exists(os.path.join(self.folder,
@@ -156,41 +164,47 @@ class Calculation(object):
         E_set = False
         T_set = False
         V_set = False
-        with open(os.path.join(self.folder, 'static', 'info')) as f:
-            for line in f:
-                # The following makes sure we only find the values once in the
-                # info file. If we find a value a second time we can not be
-                # sure we have the correct one.
-                if 'SCF converged in ' in line:
-                    if iterations_set:
-                        raise Exception('iterations_set')
-                    iterations = int(line.split('SCF converged in')[1].split(
-                        'iterations')[0].strip())
-                    iterations_set = True
-                if 'SCF *not* converged' in line:
-                    if iterations_set:
-                        raise Exception('iterations_set2')
-                    iterations = 0
-                    iterations_set = True
-                if ('Total' in line and '=' in line
-                        and line.split('=')[0].strip() == 'Total'):
-                    if E_set:
-                        raise Exception('E_set')
-                    E = float(line.split('=')[1].strip())
-                    E_set = True
-                if 'Kinetic' in line:
-                    if T_set:
-                        raise Exception('T_set')
-                    T = float(line.split('=')[1].strip())
-                    T_set = True
-                if 'External' in line:
-                    if V_set:
-                        raise Exception('V_set')
-                    V = float(line.split('=')[1].strip())
-                    V_set = True
-            # Check if all information were found.
-            if not (iterations_set and E_set and T_set and V_set):
-                raise Exception('did not find all information')
+        try:
+            with open(os.path.join(self.folder, 'static', 'info')) as f:
+                for line in f:
+                    # The following makes sure we only find the values once in the
+                    # info file. If we find a value a second time we can not be
+                    # sure we have the correct one.
+                    if 'SCF converged in ' in line:
+                        if iterations_set:
+                            raise Exception('iterations_set')
+                        iterations = int(line.split('SCF converged in')[1].split(
+                            'iterations')[0].strip())
+                        iterations_set = True
+                    if 'SCF *not* converged' in line:
+                        if iterations_set:
+                            raise Exception('iterations_set2')
+                        iterations = 0
+                        iterations_set = True
+                    if ('Total' in line and '=' in line
+                            and line.split('=')[0].strip() == 'Total'):
+                        if E_set:
+                            raise Exception('E_set')
+                        E = float(line.split('=')[1].strip())
+                        E_set = True
+                    if 'Kinetic' in line:
+                        if T_set:
+                            raise Exception('T_set')
+                        T = float(line.split('=')[1].strip())
+                        T_set = True
+                    if 'External' in line:
+                        if V_set:
+                            raise Exception('V_set')
+                        V = float(line.split('=')[1].strip())
+                        V_set = True
+                # Check if all information were found.
+                if not (iterations_set and E_set and T_set and V_set):
+                    raise Exception('did not find all information')
+        except IOError, err:
+            print(subprocess.check_output(['tail', '-20',
+                                           os.path.join(self.folder, 'output')]))
+            raise RuntimeError(str(err) + '\nCan not read static/info file. The '
+                               ' last lines of output are printed above.')
 
         if iterations == 0:
             print('Warning! SCF *not* converged!')
